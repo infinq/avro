@@ -1,1 +1,1 @@
-include github.com/hamba/make/golang
+include github.com/infinq/make/golang

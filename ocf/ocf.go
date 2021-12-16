@@ -12,9 +12,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 
-	"github.com/hamba/avro"
-	"github.com/hamba/avro/internal/bytesx"
+	"github.com/infinq/avro"
+	"github.com/infinq/avro/internal/bytesx"
 )
 
 const (
@@ -215,14 +216,33 @@ func NewEncoder(s string, w io.Writer, opts ...EncoderFunc) (*Encoder, error) {
 
 	writer := avro.NewWriter(w, 512)
 
-	cfg.Metadata[schemaKey] = []byte(schema.String())
-	cfg.Metadata[codecKey] = []byte(cfg.CodecName)
-	header := Header{
-		Magic: magicBytes,
-		Meta:  cfg.Metadata,
-	}
-	_, _ = rand.Read(header.Sync[:])
-	writer.WriteVal(HeaderSchema, header)
+	header := Header{}
+    file := w.(*os.File)
+    stat, _ := file.Stat()
+
+    if stat.Size() > 0 {
+        // append to existing ocf file
+        // first read to the end
+        dec, _ := NewDecoder(file)
+        for dec.HasNext() {
+            var record interface{}
+            dec.Decode(&record)
+        }
+        if dec.Error() != nil {
+            return nil,  dec.Error()
+        }
+        // use readers sync as new writing position
+        header.Sync = dec.sync
+    } else {
+        cfg.Metadata[schemaKey] = []byte(schema.String())
+        cfg.Metadata[codecKey] = []byte(cfg.CodecName)
+        header = Header{
+            Magic: magicBytes,
+            Meta:  cfg.Metadata,
+        }
+        _, _ = rand.Read(header.Sync[:])
+        writer.WriteVal(HeaderSchema, header)
+    }
 
 	codec, err := resolveCodec(cfg.CodecName)
 	if err != nil {

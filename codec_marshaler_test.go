@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hamba/avro"
+	"github.com/infinq/avro"
 	"github.com/stretchr/testify/assert"
 )
 
